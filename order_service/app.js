@@ -51,6 +51,47 @@ app.post('/purchase/:id', async (req, res) => {
 
 });
 
+// Search proxy
+app.get('/search/:topic', async (req, res) => {
+  try {
+    const topic = req.params.topic;
+    const response = await axios.get(`http://localhost:5001/search/${topic}`);
+    res.json(response.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Info proxy
+app.get('/info/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const response = await axios.get(`http://localhost:5001/info/${id}`);
+    res.json(response.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/update/:id', async (req, res) => {
+
+  const id = req.params.id;
+
+  try {
+
+    const response = await axios.put(
+      `http://localhost:5001/update/${id}`,
+      req.body
+    );
+
+    res.json(response.data);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+
+});
+
 app.listen(5002, () => {
   console.log("Order service running on port 5002");
 });

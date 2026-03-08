@@ -37,6 +37,23 @@ app.post('/purchase/:id', async (req, res) => {
   }
 });
 
+// Update book
+app.put('/update/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const result = await axios.put(
+      `http://localhost:5001/update/${id}`,
+      req.body
+    );
+
+    res.json(result.data);
+
+  } catch (err) {
+    res.status(500).json({ error: "Service error" });
+  }
+});
+
 app.listen(5000, () => {
   console.log("Frontend running on port 5000");
 });
