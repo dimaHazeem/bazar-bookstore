@@ -18,7 +18,12 @@ app.get('/info/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const catalog = JSON.parse(fs.readFileSync(catalogFile));
   const book = catalog.find(b => b.id === id);
-  if (!book) return res.status(404).json({message:"Book not found"});
+
+  if (!book) {
+    return res.status(404).json({ message: "Book not found" });
+  }
+
+  res.json(book);
 });
 
 // PUT /update/:id
@@ -26,12 +31,15 @@ app.put('/update/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const catalog = JSON.parse(fs.readFileSync(catalogFile));
   const book = catalog.find(b => b.id === id);
-  if (book) {
+
+  if (!book) return res.status(404).json({ message: 'Book not found' });
+
+  if (req.body && typeof req.body.quantity === 'number') {
     book.quantity = req.body.quantity;
     fs.writeFileSync(catalogFile, JSON.stringify(catalog, null, 2));
-    res.json({ message: 'Quantity updated' });
+    return res.json({ message: 'Quantity updated' });
   } else {
-    res.status(404).json({ message: 'Book not found' });
+    return res.status(400).json({ message: 'Invalid request body' });
   }
 });
 
