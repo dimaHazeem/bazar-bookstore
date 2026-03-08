@@ -1,17 +1,17 @@
 [
   {
     "id": 1,
-    "title": "How to get a good grade in DOS in 40 minutes a day",
+    "title": "Advanced DOS Systems",
     "topic": "distributed systems",
-    "price": 50,
-    "quantity": 6
+    "price": 60,
+    "quantity": 0
   },
   {
     "id": 2,
-    "title": "RPCs for Noobs",
+    "title": "Advanced DOS Systems",
     "topic": "distributed systems",
     "price": 40,
-    "quantity": 3
+    "quantity": 2
   },
   {
     "id": 3,
@@ -25,6 +25,6 @@
     "title": "Cooking for the Impatient Undergrad",
     "topic": "undergraduate school",
     "price": 20,
-    "quantity": 7
+    "quantity": 5
   }
 ]
