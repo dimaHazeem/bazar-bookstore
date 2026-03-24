@@ -1,5 +1,4 @@
 const express = require('express');
-const axios = require('axios');
 const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const db = new sqlite3.Database('./catalog.db', (err) => {
@@ -20,9 +19,9 @@ CREATE TABLE IF NOT EXISTS books (
 `);
 db.run(`
 INSERT OR IGNORE INTO books VALUES
-(1,'Advanced DOS Systems','distributed systems',60,0),
-(2,'Advanced DOS Systems','distributed systems',40,1),
-(3,'Xen and the Art of Surviving Undergraduate School','undergraduate school',30,2),
+(1,'How to get a good grade in DOS in 40 minutes a day','distributed systems',60,5),
+(2,'RPCs for Noobs','distributed systems',50,5),
+(3,'Xen and the Art of Surviving Undergraduate School','undergraduate school',30,5),
 (4,'Cooking for the Impatient Undergrad','undergraduate school',20,5)
 `);
 
@@ -32,12 +31,10 @@ app.use(express.json());
 app.get('/search/:topic', (req, res) => {
   const topic = req.params.topic;
   db.all(
-    "SELECT * FROM books WHERE topic=?",
+    "SELECT id, title FROM books WHERE topic = ?",
     [topic],
     (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
+      if (err) return res.status(500).json({ error: err.message });
       res.json(rows);
     }
   );
@@ -45,51 +42,40 @@ app.get('/search/:topic', (req, res) => {
 
 // GET /info/:id
 app.get('/info/:id', (req, res) => {
-
   const id = parseInt(req.params.id);
-
+  if (isNaN(id)) {
+    return res.status(400).json({ error: "Invalid item id" });
+  }
   db.get(
-    "SELECT * FROM books WHERE id=?",
+    "SELECT title, quantity, price FROM books WHERE id = ?",
     [id],
     (err, row) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      if (!row) {
-        return res.status(404).json({ message: "Book not found" });
-      }
+      if (err) return res.status(500).json({ error: err.message });
+      if (!row) return res.status(404).json({ error: "Book not found" });
       res.json(row);
     }
   );
-
 });
 
 // PUT /update/:id
 app.put('/update/:id', (req, res) => {
   const id = parseInt(req.params.id);
-  const quantity = req.body.quantity;
+  if (isNaN(id)) {
+    return res.status(400).json({ error: "Invalid item id" });
+  }
+  const { quantity, price } = req.body;
+
   db.run(
-    "UPDATE books SET quantity=? WHERE id=?",
-    [quantity, id],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
+    "UPDATE books SET quantity = COALESCE(?, quantity), price = COALESCE(?, price) WHERE id = ?",
+    [quantity, price, id],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      if (this.changes === 0) {
+        return res.status(404).json({ error: "Book not found" });
       }
-      res.json({
-        message: "Book updated successfully"
-      });
+      res.json({ message: "Book updated successfully" });
     }
   );
-});
-
-app.post('/purchase/:id', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const response = await axios.post(`http://localhost:5002/purchase/${id}`);
-    res.json(response.data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
 });
 
 app.listen(5001, () => console.log('Catalog service running on port 5001'));

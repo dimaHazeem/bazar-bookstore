@@ -1,6 +1,8 @@
+const CATALOG_URL = process.env.CATALOG_URL || 'http://localhost:5001';
+const ORDER_URL = process.env.ORDER_URL || 'http://localhost:5002';
+
 const express = require('express');
 const axios = require('axios');
-
 const app = express();
 app.use(express.json());
 
@@ -8,49 +10,50 @@ app.use(express.json());
 app.get('/search/:topic', async (req, res) => {
   try {
     const topic = req.params.topic;
-    const result = await axios.get(`http://localhost:5001/search/${topic}`);
+    const result = await axios.get(`${CATALOG_URL}/search/${topic}`);
+    console.log(`Search for topic: ${topic}`);
+    console.log(result.data);
     res.json(result.data);
   } catch (err) {
-    res.status(500).json({ error: "Service error" });
+    res.status(err.response?.status || 500).json(
+      err.response?.data || { error: "Service error" }
+    );
   }
 });
 
 // Book info
 app.get('/info/:id', async (req, res) => {
   try {
-    const id = req.params.id;
-    const result = await axios.get(`http://localhost:5001/info/${id}`);
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid item id" });
+    }
+    const result = await axios.get(`${CATALOG_URL}/info/${id}`);
+    console.log(`Info request for item: ${id}`);
+    console.log(result.data);
     res.json(result.data);
   } catch (err) {
-    res.status(500).json({ error: "Service error" });
+    res.status(err.response?.status || 500).json(
+      err.response?.data || { error: "Service error" }
+    );
   }
 });
 
 // Purchase book
 app.post('/purchase/:id', async (req, res) => {
   try {
-    const id = req.params.id;
-    const result = await axios.post(`http://localhost:5002/purchase/${id}`);
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid item id" });
+    }
+    const result = await axios.post(`${ORDER_URL}/purchase/${id}`);
+    console.log(`Purchase request for item: ${id}`);
+    console.log(result.data);
     res.json(result.data);
   } catch (err) {
-    res.status(500).json({ error: "Service error" });
-  }
-});
-
-// Update book
-app.put('/update/:id', async (req, res) => {
-  try {
-    const id = req.params.id;
-
-    const result = await axios.put(
-      `http://localhost:5001/update/${id}`,
-      req.body
+    res.status(err.response?.status || 500).json(
+      err.response?.data || { error: "Service error" }
     );
-
-    res.json(result.data);
-
-  } catch (err) {
-    res.status(500).json({ error: "Service error" });
   }
 });
 
