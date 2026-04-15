@@ -8,6 +8,8 @@ const db = new sqlite3.Database('./catalog.db', (err) => {
     console.log("Connected to catalog database.");
   }
 });
+db.serialize(() => {
+
 db.run(`
 CREATE TABLE IF NOT EXISTS books (
   id INTEGER PRIMARY KEY,
@@ -24,6 +26,7 @@ INSERT OR IGNORE INTO books VALUES
 (3,'Xen and the Art of Surviving Undergraduate School','undergraduate school',30,5),
 (4,'Cooking for the Impatient Undergrad','undergraduate school',20,5)
 `);
+});
 
 app.use(express.json());
 
