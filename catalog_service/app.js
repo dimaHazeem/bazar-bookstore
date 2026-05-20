@@ -19,13 +19,16 @@ CREATE TABLE IF NOT EXISTS books (
   quantity INTEGER
 )
 `);
-db.run(`
-INSERT OR IGNORE INTO books VALUES
-(1,'How to get a good grade in DOS in 40 minutes a day','distributed systems',60,5),
-(2,'RPCs for Noobs','distributed systems',50,5),
-(3,'Xen and the Art of Surviving Undergraduate School','undergraduate school',30,5),
-(4,'Cooking for the Impatient Undergrad','undergraduate school',20,5)
-`);
+ db.run(`
+    INSERT OR IGNORE INTO books VALUES
+    (1,'How to get a good grade in DOS in 40 minutes a day','distributed systems',60,5),
+    (2,'RPCs for Noobs','distributed systems',50,5),
+    (3,'Xen and the Art of Surviving Undergraduate School','undergraduate school',30,5),
+    (4,'Cooking for the Impatient Undergrad','undergraduate school',20,5),
+    (5,'How to finish Project 3 on time','undergraduate school',45,5),
+    (6,'Why theory classes are so hard','undergraduate school',35,5),
+    (7,'Spring in the Pioneer Valley','undergraduate school',25,5)
+  `);
 });
 
 app.use(express.json());

@@ -7,8 +7,12 @@ services:
     container_name: bazar-catalog-service
     ports:
       - "5001:5001"
+    volumes:
+      - ./catalog_service/catalog.db:/app/catalog.db
     networks:
       - bazar-network
+
+   
 
   order:
     build:
@@ -21,8 +25,11 @@ services:
       - CATALOG_URL=http://catalog:5001
     depends_on:
       - catalog
+    volumes:
+      - ./order_service/orders.db:/app/orders.db
     networks:
       - bazar-network
+    
 
   frontend:
     build:
