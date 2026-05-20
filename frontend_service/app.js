@@ -1,5 +1,20 @@
-const CATALOG_URL = process.env.CATALOG_URL || 'http://localhost:5001';
-const ORDER_URL = process.env.ORDER_URL || 'http://localhost:5002';
+const CATALOG_REPLICAS = (process.env.CATALOG_REPLICAS || 'http://localhost:5001').split(',');
+const ORDER_REPLICAS = (process.env.ORDER_REPLICAS || 'http://localhost:5002').split(',');
+
+let catalogIndex = 0;
+let orderIndex = 0;
+
+function getNextCatalogReplica() {
+  const replica = CATALOG_REPLICAS[catalogIndex];
+  catalogIndex = (catalogIndex + 1) % CATALOG_REPLICAS.length;
+  return replica;
+}
+
+function getNextOrderReplica() {
+  const replica = ORDER_REPLICAS[orderIndex];
+  orderIndex = (orderIndex + 1) % ORDER_REPLICAS.length;
+  return replica;
+}
 
 const express = require('express');
 const axios = require('axios');
@@ -19,7 +34,10 @@ app.get('/search/:topic', async (req, res) => {
   try {
     const topic = req.params.topic;
 
-    const result = await axios.get(`${CATALOG_URL}/search/${topic}`);
+    const catalogReplica = getNextCatalogReplica();
+    console.log(`Forwarding search request to ${catalogReplica}`);
+
+    const result = await axios.get(`${catalogReplica}/search/${topic}`);
 
     console.log(`Search for topic: ${topic}`);
     console.log(result.data);
@@ -57,7 +75,10 @@ app.get('/info/:id', async (req, res) => {
 
     // 2. If not in cache, ask catalog server
     console.log(`CACHE MISS for item ${id}`);
-    const result = await axios.get(`${CATALOG_URL}/info/${id}`);
+    const catalogReplica = getNextCatalogReplica();
+    console.log(`Forwarding info request to ${catalogReplica}`);
+
+    const result = await axios.get(`${catalogReplica}/info/${id}`);
 
     // 3. Save result in cache
     cache[cacheKey] = result.data;
@@ -86,7 +107,10 @@ app.post('/purchase/:id', async (req, res) => {
       return res.status(400).json({ error: "Invalid item id" });
     }
 
-    const result = await axios.post(`${ORDER_URL}/purchase/${id}`);
+    const orderReplica = getNextOrderReplica();
+    console.log(`Forwarding purchase request to ${orderReplica}`);
+
+    const result = await axios.post(`${orderReplica}/purchase/${id}`);
 
     console.log(`Purchase request for item: ${id}`);
     console.log(result.data);

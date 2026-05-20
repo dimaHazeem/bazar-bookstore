@@ -1,37 +1,68 @@
-
 services:
-  catalog:
+  catalog1:
     build:
       context: ./catalog_service
       dockerfile: Dockerfile
-    container_name: bazar-catalog-service
+    container_name: bazar-catalog-service-1
     ports:
       - "5001:5001"
     environment:
       - FRONTEND_URL=http://frontend:5000
+      - REPLICA_URL=http://catalog2:5001
     volumes:
-      - ./catalog_service/catalog.db:/app/catalog.db
+      - ./catalog_service/catalog1.db:/app/catalog.db
     networks:
       - bazar-network
 
-   
+  catalog2:
+    build:
+      context: ./catalog_service
+      dockerfile: Dockerfile
+    container_name: bazar-catalog-service-2
+    ports:
+      - "5003:5001"
+    environment:
+      - FRONTEND_URL=http://frontend:5000
+      - REPLICA_URL=http://catalog1:5001
 
-  order:
+    volumes:
+      - ./catalog_service/catalog2.db:/app/catalog.db
+    networks:
+      - bazar-network
+
+  order1:
     build:
       context: ./order_service
       dockerfile: Dockerfile
-    container_name: bazar-order-service
+    container_name: bazar-order-service-1
     ports:
       - "5002:5002"
     environment:
-      - CATALOG_URL=http://catalog:5001
+      - CATALOG_URL=http://catalog1:5001
     depends_on:
-      - catalog
+      - catalog1
+      - catalog2
     volumes:
-      - ./order_service/orders.db:/app/orders.db
+      - ./order_service/orders1.db:/app/orders.db
     networks:
       - bazar-network
-    
+
+  order2:
+    build:
+      context: ./order_service
+      dockerfile: Dockerfile
+    container_name: bazar-order-service-2
+    ports:
+      - "5004:5002"
+    environment:
+      - CATALOG_URL=http://catalog2:5001
+    depends_on:
+      - catalog1
+      - catalog2
+    volumes:
+      - ./order_service/orders2.db:/app/orders.db
+    networks:
+      - bazar-network
 
   frontend:
     build:
@@ -41,11 +72,13 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - CATALOG_URL=http://catalog:5001
-      - ORDER_URL=http://order:5002
+      - CATALOG_REPLICAS=http://catalog1:5001,http://catalog2:5001
+      - ORDER_REPLICAS=http://order1:5002,http://order2:5002
     depends_on:
-      - catalog
-      - order
+      - catalog1
+      - catalog2
+      - order1
+      - order2
     networks:
       - bazar-network
 
