@@ -99,6 +99,30 @@ app.post('/purchase/:id', async (req, res) => {
   }
 });
 
+// Invalidate one item from cache
+// Backend services call this before updating the database
+app.post('/invalidate/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+
+  if (isNaN(id)) {
+    return res.status(400).json({ error: "Invalid item id" });
+  }
+
+  const cacheKey = `info:${id}`;
+
+  if (cache[cacheKey]) {
+    delete cache[cacheKey];
+    console.log(`Cache invalidated for item ${id}`);
+  } else {
+    console.log(`Invalidate request for item ${id}, but item was not in cache`);
+  }
+
+  res.json({
+    message: `Cache invalidated for item ${id}`
+  });
+});
+
+
 // Endpoint to manually clear the whole cache
 app.delete('/cache', (req, res) => {
   for (const key in cache) {

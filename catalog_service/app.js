@@ -1,5 +1,8 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
+const axios = require('axios');
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5000';
 const app = express();
 const db = new sqlite3.Database('./catalog.db', (err) => {
   if (err) {
@@ -64,24 +67,41 @@ app.get('/info/:id', (req, res) => {
 });
 
 // PUT /update/:id
-app.put('/update/:id', (req, res) => {
+app.put('/update/:id', async (req, res) => {
   const id = parseInt(req.params.id);
+
   if (isNaN(id)) {
     return res.status(400).json({ error: "Invalid item id" });
   }
+
   const { quantity, price } = req.body;
 
-  db.run(
-    "UPDATE books SET quantity = COALESCE(?, quantity), price = COALESCE(?, price) WHERE id = ?",
-    [quantity, price, id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      if (this.changes === 0) {
-        return res.status(404).json({ error: "Book not found" });
-      }
-      res.json({ message: "Book updated successfully" });
+  try {
+    // Lab 2 cache consistency:
+    // before writing to the database, invalidate the cached item in the frontend
+    try {
+      await axios.post(`${FRONTEND_URL}/invalidate/${id}`);
+      console.log(`Sent cache invalidation request for item ${id}`);
+    } catch (invalidateErr) {
+      console.log(`Could not invalidate cache for item ${id}: ${invalidateErr.message}`);
     }
-  );
+
+    db.run(
+      "UPDATE books SET quantity = COALESCE(?, quantity), price = COALESCE(?, price) WHERE id = ?",
+      [quantity, price, id],
+      function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+
+        if (this.changes === 0) {
+          return res.status(404).json({ error: "Book not found" });
+        }
+
+        res.json({ message: "Book updated successfully" });
+      }
+    );
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(5001, () => console.log('Catalog service running on port 5001'));
