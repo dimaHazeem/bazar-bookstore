@@ -3,17 +3,31 @@ const ORDER_URL = process.env.ORDER_URL || 'http://localhost:5002';
 
 const express = require('express');
 const axios = require('axios');
+
 const app = express();
 app.use(express.json());
 
+// Simple in-memory cache for Lab 2
+// Key example: "info:5"
+// Value example: { title, quantity, price }
+const cache = {};
+
 // Search books
+// For now, search still goes directly to catalog.
+// We will focus caching on /info/:id first because the lab says cache stores lookup results.
 app.get('/search/:topic', async (req, res) => {
   try {
     const topic = req.params.topic;
+
     const result = await axios.get(`${CATALOG_URL}/search/${topic}`);
+
     console.log(`Search for topic: ${topic}`);
     console.log(result.data);
-    res.json(result.data);
+
+    res.json({
+      source: "catalog",
+      data: result.data
+    });
   } catch (err) {
     res.status(err.response?.status || 500).json(
       err.response?.data || { error: "Service error" }
@@ -21,17 +35,40 @@ app.get('/search/:topic', async (req, res) => {
   }
 });
 
-// Book info
+// Book info with cache
 app.get('/info/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+
     if (isNaN(id)) {
       return res.status(400).json({ error: "Invalid item id" });
     }
+
+    const cacheKey = `info:${id}`;
+
+    // 1. Check cache first
+    if (cache[cacheKey]) {
+      console.log(`CACHE HIT for item ${id}`);
+      return res.json({
+        source: "cache",
+        data: cache[cacheKey]
+      });
+    }
+
+    // 2. If not in cache, ask catalog server
+    console.log(`CACHE MISS for item ${id}`);
     const result = await axios.get(`${CATALOG_URL}/info/${id}`);
+
+    // 3. Save result in cache
+    cache[cacheKey] = result.data;
+
     console.log(`Info request for item: ${id}`);
     console.log(result.data);
-    res.json(result.data);
+
+    res.json({
+      source: "catalog",
+      data: result.data
+    });
   } catch (err) {
     res.status(err.response?.status || 500).json(
       err.response?.data || { error: "Service error" }
@@ -40,21 +77,44 @@ app.get('/info/:id', async (req, res) => {
 });
 
 // Purchase book
+// Purchase is a write request, so it must NOT be served from cache.
 app.post('/purchase/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+
     if (isNaN(id)) {
       return res.status(400).json({ error: "Invalid item id" });
     }
+
     const result = await axios.post(`${ORDER_URL}/purchase/${id}`);
+
     console.log(`Purchase request for item: ${id}`);
     console.log(result.data);
+
     res.json(result.data);
   } catch (err) {
     res.status(err.response?.status || 500).json(
       err.response?.data || { error: "Service error" }
     );
   }
+});
+
+// Endpoint to manually clear the whole cache
+app.delete('/cache', (req, res) => {
+  for (const key in cache) {
+    delete cache[key];
+  }
+
+  console.log("Cache cleared");
+
+  res.json({
+    message: "Cache cleared successfully"
+  });
+});
+
+// Endpoint to see what is currently inside the cache
+app.get('/cache', (req, res) => {
+  res.json(cache);
 });
 
 app.listen(5000, () => {
