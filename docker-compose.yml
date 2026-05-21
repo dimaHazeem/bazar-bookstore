@@ -39,6 +39,8 @@ services:
       - "5002:5002"
     environment:
       - CATALOG_URL=http://catalog1:5001
+      - ORDER_REPLICA_URL=http://order2:5002
+
     depends_on:
       - catalog1
       - catalog2
@@ -56,6 +58,8 @@ services:
       - "5004:5002"
     environment:
       - CATALOG_URL=http://catalog2:5001
+      - ORDER_REPLICA_URL=http://order1:5002
+
     depends_on:
       - catalog1
       - catalog2
