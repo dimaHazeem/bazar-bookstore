@@ -1,0 +1,19 @@
+Performance Measurement Results
+
+Experiment setup:
+The system was deployed using Docker Compose with one frontend service, two catalog replicas, and two order replicas. The frontend used round-robin load balancing. The frontend also contained an in-memory cache for info requests.
+
+Results:
+
+| Experiment                     | Average Response Time (ms) | Minimum (ms) | Maximum (ms) |
+|-------------------------------|----------------------------|--------------|--------------|
+| Info without cache            | 32.61                      | 11.92        | 261.31       |
+| Info with cache               | 2.35                       | 1.34         | 5.41         |
+| Purchase request              | 97.55                      | 73.33        | 234.96       |
+| Cache invalidation write      | 72.12                      | 72.12        | 72.12        |
+| Cache miss after invalidation | 8.54                       | 8.54         | 8.54         |
+
+Conclusion:
+Caching significantly improved the performance of read requests. The average info request without cache took 32.61 ms, while the average info request with cache took only 2.35 ms. This improvement happens because cached requests are served directly from the frontend memory instead of being forwarded to the catalog service.
+
+Purchase requests took longer because they require communication with the order service, catalog service, cache invalidation, database update, and replica synchronization. Cache invalidation added overhead, but it maintained consistency by removing stale data before database writes.
