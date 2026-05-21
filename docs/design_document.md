@@ -111,6 +111,7 @@ Example cache entry:
     "price": 45
   }
 }
+```
 
 When a client sends an info request, the frontend first checks the cache.
 
@@ -125,9 +126,11 @@ Caching is only used for read requests. Purchase and update requests are not ser
 To avoid stale data, the cache must be invalidated when a book is updated. This happens during purchases or catalog updates.
 
 Before the catalog service writes an update to its SQLite database, it sends a request to the frontend:
+```http
 
 POST /invalidate/:id
 
+```
 The frontend then removes the cached entry for that item.
 
 For example, if item 5 is cached and then purchased, the catalog service sends an invalidation request for item 5. The frontend deletes info:5 from the cache. The next request for item 5 becomes a cache miss and retrieves the fresh quantity from the catalog database.
@@ -139,14 +142,19 @@ This maintains stronger consistency because stale cached quantities are not retu
 The frontend uses round-robin load balancing for both catalog and order replicas.
 
 For catalog requests, the frontend alternates between:
+```text
 
 http://catalog1:5001
 http://catalog2:5001
 
+```
 For order requests, the frontend alternates between:
+```text
 
 http://order1:5002
 http://order2:5002
+
+```
 
 This distributes requests across the replicas.
 
