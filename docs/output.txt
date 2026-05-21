@@ -1,0 +1,236 @@
+Bazar Bookstore - Lab 2 Output
+
+Project Setup:
+The system was deployed using Docker Compose with the following services:
+
+- frontend service
+- catalog replica 1
+- catalog replica 2
+- order replica 1
+- order replica 2
+
+Docker Containers:
+bazar-frontend-service
+bazar-catalog-service-1
+bazar-catalog-service-2
+bazar-order-service-1
+bazar-order-service-2
+
+Startup Output:
+Catalog service running on port 5001
+Connected to catalog database.
+Catalog service running on port 5001
+Connected to catalog database.
+Order service running on port 5002
+Connected to orders database.
+Order service running on port 5002
+Connected to orders database.
+Frontend running on port 5000
+
+
+1. Testing New Books
+
+Request:
+GET http://localhost:5000/info/5
+
+Output:
+{
+  "source": "catalog",
+  "data": {
+    "title": "How to finish Project 3 on time",
+    "quantity": 5,
+    "price": 45
+  }
+}
+
+Request:
+GET http://localhost:5000/info/6
+
+Output:
+{
+  "source": "catalog",
+  "data": {
+    "title": "Why theory classes are so hard",
+    "quantity": 5,
+    "price": 35
+  }
+}
+
+Request:
+GET http://localhost:5000/info/7
+
+Output:
+{
+  "source": "catalog",
+  "data": {
+    "title": "Spring in the Pioneer Valley",
+    "quantity": 5,
+    "price": 25
+  }
+}
+
+
+2. Testing Cache Hit and Cache Miss
+
+First Request:
+GET http://localhost:5000/info/5
+
+Frontend Log:
+CACHE MISS for item 5
+Forwarding info request to http://catalog1:5001
+Info request for item: 5
+{ title: 'How to finish Project 3 on time', quantity: 5, price: 45 }
+
+Response:
+{
+  "source": "catalog",
+  "data": {
+    "title": "How to finish Project 3 on time",
+    "quantity": 5,
+    "price": 45
+  }
+}
+
+Second Request:
+GET http://localhost:5000/info/5
+
+Frontend Log:
+CACHE HIT for item 5
+
+Response:
+{
+  "source": "cache",
+  "data": {
+    "title": "How to finish Project 3 on time",
+    "quantity": 5,
+    "price": 45
+  }
+}
+
+
+3. Testing Round-Robin Load Balancing for Catalog Replicas
+
+Requests:
+GET http://localhost:5000/info/5
+GET http://localhost:5000/info/6
+GET http://localhost:5000/info/7
+
+Frontend Logs:
+CACHE MISS for item 5
+Forwarding info request to http://catalog1:5001
+
+CACHE MISS for item 6
+Forwarding info request to http://catalog2:5001
+
+CACHE MISS for item 7
+Forwarding info request to http://catalog1:5001
+
+Result:
+The frontend forwards catalog read requests to catalog replicas using round-robin load balancing.
+
+
+4. Testing Round-Robin Load Balancing for Order Replicas
+
+Request:
+POST http://localhost:5000/purchase/5
+
+Frontend Log:
+Forwarding purchase request to http://order1:5002
+
+Request:
+POST http://localhost:5000/purchase/6
+
+Frontend Log:
+Forwarding purchase request to http://order2:5002
+
+Result:
+The frontend forwards purchase requests to order replicas using round-robin load balancing.
+
+
+5. Testing Cache Invalidation
+
+Before purchase, item 5 may be stored in frontend cache.
+
+Request:
+POST http://localhost:5000/purchase/5
+
+Logs:
+Forwarding purchase request to http://order1:5002
+Cache invalidated for item 5
+Sent cache invalidation request for item 5
+Purchase request received for item 5
+bought book How to finish Project 3 on time
+
+Response:
+{
+  "message": "Bought book: How to finish Project 3 on time",
+  "order_id": 1,
+  "item_id": 5,
+  "time": "May 20, 2026, 05:05:32 PM"
+}
+
+Result:
+The cache entry for item 5 was invalidated before the database update, preventing stale data from being returned.
+
+
+6. Testing Catalog Replica Synchronization
+
+Request:
+POST http://localhost:5000/purchase/5
+
+Logs:
+bazar-catalog-service-1 | Sent cache invalidation request for item 5
+bazar-catalog-service-2 | Replica synchronized item 5
+bazar-catalog-service-1 | Synced update for item 5 to replica http://catalog2:5001
+
+Direct Check:
+GET http://localhost:5001/info/5
+GET http://localhost:5003/info/5
+
+Both catalog replicas returned the same quantity for item 5.
+
+Result:
+Catalog replica synchronization works correctly. When one catalog replica updates an item, the other catalog replica receives the same update.
+
+
+7. Testing Order Replica Synchronization
+
+Request:
+POST http://localhost:5000/purchase/5
+
+Logs:
+bazar-frontend-service | Forwarding purchase request to http://order1:5002
+bazar-order-service-2  | Replica synchronized order for item 5
+bazar-order-service-1  | Synced order for item 5 to replica http://order2:5002
+bazar-order-service-1  | Purchase request received for item 5
+bazar-order-service-1  | bought book How to finish Project 3 on time
+
+Request:
+POST http://localhost:5000/purchase/6
+
+Logs:
+bazar-frontend-service | Forwarding purchase request to http://order2:5002
+bazar-order-service-1  | Replica synchronized order for item 6
+bazar-order-service-2  | Synced order for item 6 to replica http://order1:5002
+bazar-order-service-2  | Purchase request received for item 6
+bazar-order-service-2  | bought book Why theory classes are so hard
+
+Result:
+Order replica synchronization works correctly. When one order replica stores an order, it sends the order to the other order replica.
+
+
+8. Performance Measurement Results
+
+Experiment setup:
+The system was deployed using Docker Compose with one frontend service, two catalog replicas, and two order replicas. The frontend used round-robin load balancing and an in-memory cache for info requests.
+
+| Experiment                     | Average Response Time (ms) | Minimum (ms) | Maximum (ms) |
+|-------------------------------|----------------------------|--------------|--------------|
+| Info without cache            | 32.61                      | 11.92        | 261.31       |
+| Info with cache               | 2.35                       | 1.34         | 5.41         |
+| Purchase request              | 97.55                      | 73.33        | 234.96       |
+| Cache invalidation write      | 72.12                      | 72.12        | 72.12        |
+| Cache miss after invalidation | 8.54                       | 8.54         | 8.54         |
+
+Conclusion:
+Caching significantly improved read request latency. The average info request without cache was 32.61 ms, while the average info request with cache was 2.35 ms. Purchase requests took longer because they involve the order service, catalog service, database update, cache invalidation, and replica synchronization.
