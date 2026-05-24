@@ -121,7 +121,7 @@ If the item is not found, the frontend forwards the request to one of the catalo
 
 Caching is only used for read requests. Purchase and update requests are not served from the cache because they modify system state.
 
-7. Cache Consistency and Invalidation
+## 7. Cache Consistency and Invalidation
 
 To avoid stale data, the cache must be invalidated when a book is updated. This happens during purchases or catalog updates.
 
@@ -137,7 +137,7 @@ For example, if item 5 is cached and then purchased, the catalog service sends a
 
 This maintains stronger consistency because stale cached quantities are not returned after a purchase.
 
-8. Load Balancing
+## 8. Load Balancing
 
 The frontend uses round-robin load balancing for both catalog and order replicas.
 
@@ -168,7 +168,8 @@ Example for order requests:
 
 /purchase/5 -> order1
 /purchase/6 -> order2
-9. Catalog Replica Synchronization
+
+## 9. Catalog Replica Synchronization
 
 Each catalog replica has its own SQLite database file. To keep the replicas consistent, catalog updates are synchronized between replicas.
 
@@ -189,7 +190,7 @@ catalog2 updates its local database
 
 After synchronization, both catalog replicas show the same quantity for the item.
 
-10. Order Replica Synchronization
+## 10. Order Replica Synchronization
 
 Each order replica also has its own SQLite database. To provide stronger replication, the order replicas synchronize order records.
 
@@ -203,7 +204,7 @@ The same process happens in the opposite direction when order2 receives a purcha
 
 This means both order replicas maintain a copy of the order history.
 
-11. Persistence
+## 11. Persistence
 
 The system uses SQLite databases for persistent storage.
 
@@ -219,7 +220,7 @@ order_service/orders2.db
 
 Docker volumes are used so the database files are visible and persistent on the host machine. Database files are excluded from GitHub using .gitignore because they are generated at runtime.
 
-12. Design Tradeoffs
+## 12. Design Tradeoffs
 Cache inside frontend vs. separate cache service
 
 The cache was implemented inside the frontend service instead of creating a separate cache microservice. This made the design simpler and reduced extra REST calls between frontend and cache. The tradeoff is that the cache is tied to the frontend process. If the frontend restarts, the cache is lost.
@@ -236,7 +237,7 @@ Stronger order synchronization
 
 A stronger approach was implemented for order replicas. Instead of allowing each order replica to keep only its own orders, each order is synchronized to the other replica. This improves consistency and makes both order databases contain the same order history.
 
-13. Known Limitations
+## 13. Known Limitations
 
 The system works for the required lab functionality, but it has some limitations:
 
@@ -247,7 +248,7 @@ If a replica is down during synchronization, the update may fail to sync immedia
 The system does not currently retry failed synchronization requests.
 Concurrent purchases of the same item may still need stronger transaction handling for real production use.
 
-14. Possible Improvements
+## 14. Possible Improvements
 Possible improvements include:
 
 Add retry logic for failed replica synchronization.
@@ -259,7 +260,7 @@ Use a message queue for more reliable synchronization.
 Add more detailed logging and monitoring.
 Add automated tests for cache consistency and replica synchronization.
 
-15. How to Run the Project
+## 15. How to Run the Project
 First, clone the repository and open the project folder.
 
 Then run:
@@ -287,7 +288,8 @@ Direct order replica ports:
 
 order1: localhost:5002
 order2: localhost:5004
-16. Performance Measurements
+
+## 16. Performance Measurements
 
 A performance script was added in:
 
